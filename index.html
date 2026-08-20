@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel 表格合并工具 · 全新版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+    <!-- ==================== 品牌头 ==================== -->
+    <header class="app-header glass">
+        <div class="brand">
+            <span class="brand-icon">⚡</span>
+            <div class="brand-text">
+                <h1>Excel 表格合并工具</h1>
+                <p class="brand-sub">多文件按行合并 · 本地处理不上传 · 四步走完即导出</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== 四步向导进度条 ==================== -->
+    <nav class="stepper glass" id="stepper">
+        <div class="step-item active" data-step="1">
+            <div class="step-dot" id="stepDot1">1</div>
+            <span class="step-label">上传 &amp; 选 Sheet</span>
+        </div>
+        <div class="step-line"><i></i></div>
+        <div class="step-item" data-step="2">
+            <div class="step-dot" id="stepDot2">2</div>
+            <span class="step-label">选择映射</span>
+        </div>
+        <div class="step-line"><i></i></div>
+        <div class="step-item" data-step="3">
+            <div class="step-dot" id="stepDot3">3</div>
+            <span class="step-label">预览效果</span>
+        </div>
+        <div class="step-line"><i></i></div>
+        <div class="step-item" data-step="4">
+            <div class="step-dot" id="stepDot4">4</div>
+            <span class="step-label">导出</span>
+        </div>
+    </nav>
+
+    <!-- 全局状态条（合并进度提示，默认隐藏） -->
+    <div class="status-bar glass" id="statusBar">
+        <div id="statusMessage">正在处理文件...</div>
+        <div class="progress-bar"><div class="progress" id="progressBar"></div></div>
+    </div>
+
+    <main class="app-main">
+
+        <!-- ==================== ① 上传 & 选 Sheet ==================== -->
+        <section class="step-panel active" id="step-upload">
+            <div class="step-head">
+                <h2><i>📤</i> 第一步 · 上传文件 &amp; 选择 Sheet</h2>
+                <p>上传要合并的 Excel / CSV 文件，每个文件默认只勾选第一个工作表，可自行增减。</p>
+            </div>
+
+            <div class="upload-area glass" id="uploadArea">
+                <i>📤</i>
+                <p>点击或拖拽文件到此处上传</p>
+                <p class="upload-sub">支持 .xlsx、.xls、.csv · 可一次选择多个文件</p>
+                <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.csv" style="display: none;">
+            </div>
+
+            <div class="file-info" id="fileInfo"><!-- 文件卡片 + 每文件 Sheet 勾选动态生成 --></div>
+        </section>
+
+        <!-- ==================== ② 选择映射 ==================== -->
+        <section class="step-panel" id="step-mapping">
+            <div class="step-head">
+                <h2><i>🛠️</i> 第二步 · 选择映射</h2>
+                <p>从预设读取，或从源列池点选/新建目标字段并挂上源列。常规直接套预设，新情况手动配。</p>
+            </div>
+
+            <!-- 预设横条（读取·修改·保存都在这） -->
+            <div class="preset-bar glass">
+                <div class="preset-bar-title">📋 预设</div>
+                <div class="preset-row">
+                    <label>字段模板</label>
+                    <select id="fieldPresetSelect" class="input-field glass">
+                        <option value="质检目标列预设">质检目标列预设</option>
+                        <option value="敏感词目标列映射">敏感词目标列映射</option>
+                        <option value="回查目标列映射">回查目标列映射</option>
+                        <option value="文本通用">文本通用</option>
+                        <option value="图片通用">图片通用</option>
+                        <option value="AI反馈-文本">AI反馈-文本</option>
+                        <option value="AI反馈-图片">AI反馈-图片</option>
+                        <option value="帖子举报">帖子举报</option>
+                        <option value="文本举报">文本举报</option>
+                        <option value="大模型">大模型</option>
+                    </select>
+                    <button class="btn btn-primary" id="loadFieldPresetBtn">读取并应用</button>
+                </div>
+                <div class="preset-row">
+                    <label>映射方案</label>
+                    <select id="mapPresetSelect" class="input-field glass">
+                        <option value="质检映射预设">质检映射预设</option>
+                        <option value="敏感词映射预设">敏感词映射预设</option>
+                        <option value="回查映射预设">回查映射预设</option>
+                    </select>
+                    <button class="btn btn-primary" id="loadMapPresetBtn">读取并应用</button>
+                </div>
+                <div class="preset-row preset-actions">
+                    <button class="btn btn-secondary btn-sm" id="managePresetBtn">管理预设</button>
+                    <button class="btn btn-success btn-sm" id="savePresetBtn">存为新预设</button>
+                    <span class="preset-tip">预设含「字段模板 + 映射方案」，可绑定 Sheet 名；读取、修改、保存都在这里完成。</span>
+                </div>
+            </div>
+
+            <!-- 左右两栏：源列名池 | 目标字段 -->
+            <div class="mapping-grid">
+                <!-- 左 · 源列名池 -->
+                <div class="source-pool glass">
+                    <div class="pool-title">📥 源列名池</div>
+                    <p class="pool-hint">点选列名 → 建立目标字段并自动匹配；独有/部分列按来源点选挂载。</p>
+
+                    <div class="pool-section">
+                        <div class="pool-sec-head green">
+                            <span class="coverage-badge" id="sameCoverage">—</span>
+                            <span>同名列（所有勾选来源都有）</span>
+                        </div>
+                        <div class="pool-tags" id="sameColumnList">
+                            <span class="pool-empty">请先上传并勾选文件（第 1 步）</span>
+                        </div>
+                    </div>
+
+                    <div class="pool-section">
+                        <div class="pool-sec-head purple">
+                            <span class="coverage-badge" id="partCoverage">—</span>
+                            <span>独有 / 部分列（按来源分组，标覆盖 N/M）</span>
+                        </div>
+                        <div class="pool-groups" id="uniqueColumnList">
+                            <span class="pool-empty">同上</span>
+                        </div>
+                    </div>
+
+                    <div class="pool-new">
+                        <input type="text" id="newFieldNameInput" class="input-field glass" placeholder="新建一个字段名字（文件里没有的）">
+                        <button class="btn btn-primary btn-sm" id="addNewFieldBtn">＋ 新建字段</button>
+                    </div>
+                </div>
+
+                <!-- 右 · 目标字段 -->
+                <div class="target-fields glass">
+                    <div class="pool-title">🎯 目标字段</div>
+                    <p class="pool-hint">每个字段可挂多个源列（同名自动全局匹配/独有按来源/缺失自动留空）。</p>
+                    <div class="field-list" id="targetFieldList">
+                        <span class="pool-empty">从左侧源列名池点选，或载入预设开始。</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== ③ 预览效果 ==================== -->
+        <section class="step-panel" id="step-preview">
+            <div class="step-head">
+                <h2><i>👁️</i> 第三步 · 预览效果</h2>
+                <p>按勾选 Sheet 核对各来源的列匹配明细，不满意可回第 2 步调整。</p>
+            </div>
+            <div id="previewTableContainer"><!-- 预览表格动态生成 --></div>
+        </section>
+
+        <!-- ==================== ④ 导出 ==================== -->
+        <section class="step-panel" id="step-export">
+            <div class="step-head">
+                <h2><i>📦</i> 第四步 · 导出</h2>
+                <p>确认配置后一键导出合并文件。全部处理能力（按行合并、人员过滤、日期格式化等）都会保留。</p>
+            </div>
+
+            <div id="exportSummary" class="export-summary"><!-- 导出前摘要动态生成 --></div>
+
+            <div class="export-actions">
+                <button class="btn btn-success btn-xl" id="mergeAndExportBtn"><i>📤</i> 合并并输出 Excel</button>
+            </div>
+
+            <!-- 人员过滤（可选，折叠） -->
+            <div class="example-container collapsible glass">
+                <div class="example-title" onclick="toggleCollapse(this.parentElement)">
+                    <i>👥</i> 人员过滤
+                    <span class="staff-switch">
+                        <input type="checkbox" id="staffFilterToggle">
+                        <label for="staffFilterToggle">启用按名单过滤</label>
+                    </span>
+                    <span class="staff-summary" id="staffCount">共 0 名人员</span>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div class="example-content">
+                    <p class="staff-hint">
+                        <i>ℹ️</i>
+                        开启后，合并时只保留「人员/姓名」列命中下方名单的行；名单留空则保留全部。点「修改人员名单」编辑，可逗号或换行批量输入。
+                    </p>
+                    <div class="staff-display" id="staffDisplay"><!-- 人员标签动态生成 --></div>
+                    <div class="staff-input" id="staffInput"><input type="text" id="staffNameInput" class="input-field glass" placeholder="输入姓名后按回车"></div>
+                    <div class="action-buttons">
+                        <button class="btn" id="editStaffBtn"><i>✏️</i>修改人员名单</button>
+                        <button class="btn btn-success hidden" id="saveStaffBtn"><i>✓</i>保存</button>
+                        <button class="btn btn-danger hidden" id="cancelStaffBtn"><i>✕</i>取消</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 底部导航 ==================== -->
+        <div class="wizard-nav glass">
+            <button class="btn" id="prevStepBtn">← 上一步</button>
+            <div class="wizard-nav-right">
+                <button class="btn btn-primary" id="nextStepBtn">下一步 →</button>
+            </div>
+        </div>
+
+        <!-- ==================== 底部信息区 ==================== -->
+        <footer class="footer-info">
+            <div class="example-container collapsible glass">
+                <div class="example-title" onclick="toggleCollapse(this.parentElement)">
+                    <i>📦</i> 版本信息与更新日志 <span class="collapse-icon">▼</span>
+                </div>
+                <div class="example-content">
+                    <p class="version-line">当前版本：<span class="version-badge">v2.0.0</span></p>
+                    <ul class="changelog">
+                        <li><strong>v2.0.0</strong> · 全新版：四步向导（上传选Sheet → 选择映射 → 预览 → 导出）+ 玻璃拟态视觉；映射模块内嵌预设（读取/修改/保存）；源列名池「同名 / 独有·部分」双模块 + 覆盖率 N/M 化解模糊地带；目标字段卡支持点选/拖拽/输入补挂源列；保留全部解析、合并、过滤、格式化、备注处理与本地持久化能力。</li>
+                        <li><strong>v1.3.0</strong> · 信息架构重构：主界面聚焦「上传 → 应用/合并」；人员过滤、映射配置与预设收纳为可展开设置卡。</li>
+                        <li><strong>v1.2.0</strong> · 全新界面重构：改为四步式向导布局。</li>
+                        <li><strong>v1.1.0</strong> · 界面与体验优化：新增内嵌流程引导、常驻操作栏。</li>
+                        <li><strong>v1.0.0</strong> · 核心功能上线：多文件上传、按人员过滤、列映射与预设、映射预览、按行合并导出。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="example-container collapsible glass">
+                <div class="example-title" onclick="toggleCollapse(this.parentElement)">
+                    <i>❓</i> 使用帮助 <span class="collapse-icon">▼</span>
+                </div>
+                <div class="example-content">
+                    <p class="example-hint">
+                        <strong>快速上手：</strong><br>
+                        • ① 上传文件并勾选要合并的 Sheet → ② 载入预设或从源列名池建字段挂源列 → ③ 预览核对 → ④ 导出。<br>
+                        • 常规情况：第 2 步顶部「字段模板 + 映射方案」直接读取并应用，两步一套用到底。<br>
+                        • 新情况：从左侧源列名池点选列名建字段；同名自动全局匹配，独有列按来源点选，缺失来源自动留空。<br>
+                        • 只想合并特定人员：第 4 步展开「人员过滤」，维护名单并开启开关。<br><br>
+                        <strong>常见问题：</strong><br>
+                        • <em>为什么某字段显示「无此列 → 留空」？</em> 该来源缺少这个列名，导出时该来源此列自动为空，不报错，可在字段上用「＋ 添加源列」补挂。<br>
+                        • <em>文件较大、处理慢？</em> 上传后卡片会给出大文件提示，导出前也会二次确认。<br>
+                        • <em>配置会自动保存吗？</em> 人员名单、映射与自定义预设会自动保存在本地浏览器，下次自动恢复。
+                    </p>
+                </div>
+            </div>
+
+            <div class="example-container collapsible glass">
+                <div class="example-title" onclick="toggleCollapse(this.parentElement)">
+                    <i>🔒</i> 关于与隐私 <span class="collapse-icon">▼</span>
+                </div>
+                <div class="example-content">
+                    <p class="example-hint">
+                        所有数据仅在本地处理，不会上传任何服务器。你的人员名单、映射偏好与自定义预设仅保存在本地浏览器（localStorage），清除浏览器数据即可删除。
+                    </p>
+                </div>
+            </div>
+        </footer>
+
+        <div class="footer-note">Excel 表格合并工具 · 全新版 · v2.0.0 · 本地处理</div>
+
+    </main>
+</div>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
